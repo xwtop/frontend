@@ -1,0 +1,426 @@
+<template>
+    <div class="admin-layout h-screen flex flex-col bg-slate-50">
+        <div class="flex flex-1 overflow-hidden">
+            <aside
+                :class="['bg-slate-900 text-white transition-all duration-300 flex flex-col overflow-hidden', isCollapse ? 'w-16' : 'w-40']"
+            >
+                <div class="h-16 flex items-center justify-center border-b border-slate-700">
+                    <div v-if="!isCollapse" class="flex items-center gap-2">
+                        <div class="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center">
+                            <span class="font-bold text-white">智</span>
+                        </div>
+                        <span class="font-bold text-lg">校园智通</span>
+                    </div>
+                    <div v-else class="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center">
+                        <span class="font-bold text-white">智</span>
+                    </div>
+                </div>
+                
+                <div class="flex-1 overflow-y-auto py-4">
+                    <el-menu
+                        :default-active="activeMenu"
+                        :collapse="isCollapse"
+                        :collapse-transition="false"
+                        background-color="#0f172a"
+                        text-color="#94a3b8"
+                        active-text-color="#3b82f6"
+                        @select="handleMenuSelect"
+                    >
+                        <template v-for="menu in menuList" :key="menu.path">
+                            <el-sub-menu v-if="menu.children && menu.children.length > 0" :index="menu.path">
+                                <template #title>
+                                    <component :is="menu.icon" class="w-5 h-5" />
+                                    <span>{{ menu.title }}</span>
+                                </template>
+                                <el-menu-item
+                                    v-for="child in menu.children"
+                                    :key="child.path"
+                                    :index="child.path"
+                                >
+                                    <component :is="child.icon" class="w-5 h-5" />
+                                    <span>{{ child.title }}</span>
+                                </el-menu-item>
+                            </el-sub-menu>
+                            <el-menu-item v-else :index="menu.path">
+                                <component :is="menu.icon" class="w-5 h-5" />
+                                <span>{{ menu.title }}</span>
+                            </el-menu-item>
+                        </template>
+                    </el-menu>
+                </div>
+            </aside>
+
+            <div class="flex-1 flex flex-col overflow-hidden">
+                <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6">
+                    <div class="flex items-center gap-4">
+                        <el-button
+                            :icon="isCollapse ? Expand : Fold"
+                            circle
+                            @click="isCollapse = !isCollapse"
+                        />
+                        <el-breadcrumb separator="/">
+                            <el-breadcrumb-item v-for="item in breadcrumbList" :key="item.path">
+                                {{ item.title }}
+                            </el-breadcrumb-item>
+                        </el-breadcrumb>
+                    </div>
+                    
+                    <div class="flex items-center gap-4">
+                        <el-badge :value="3" class="cursor-pointer">
+                            <el-button :icon="Bell" circle />
+                        </el-badge>
+                        <el-dropdown>
+                            <div class="flex items-center gap-2 cursor-pointer">
+                                <el-avatar :size="32" class="bg-primary-600">
+                                    {{ userInfo.realName?.charAt(0) || '用' }}
+                                </el-avatar>
+                                <span class="text-slate-700 font-medium">{{ userInfo.realName || '用户' }}</span>
+                            </div>
+                            <template #dropdown>
+                                <el-dropdown-menu>
+                                    <el-dropdown-item>个人中心</el-dropdown-item>
+                                    <el-dropdown-item divided @click="handleLogout">退出登录</el-dropdown-item>
+                                </el-dropdown-menu>
+                            </template>
+                        </el-dropdown>
+                    </div>
+                </header>
+
+                <div class="flex-1 flex flex-col overflow-hidden">
+                    <div class="bg-white border-b border-slate-200 px-4">
+                        <el-tabs
+                            v-model="activeTab"
+                            type="card"
+                            closable
+                            @tab-remove="handleTabRemove"
+                            @tab-click="handleTabClick"
+                        >
+                            <el-tab-pane
+                                v-for="tab in tabList"
+                                :key="tab.path"
+                                :label="tab.title"
+                                :name="tab.path"
+                            />
+                        </el-tabs>
+                    </div>
+
+                    <main class="flex-1 overflow-y-auto">
+                        <router-view v-slot="{ Component }">
+                            <transition name="fade" mode="out-in">
+                                <component :is="Component" />
+                            </transition>
+                        </router-view>
+                    </main>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<script setup>
+import { ref, computed, watch, markRaw } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import {
+    Expand,
+    Fold,
+    Bell,
+    HomeFilled,
+    User,
+    Setting,
+    Lock,
+    Document,
+    FolderOpened,
+    Grid,
+    Search,
+    Star,
+    TrendCharts,
+    ChatDotRound,
+    ChatLineRound,
+    Message,
+    AlarmClock,
+    Promotion,
+    Edit,
+    Top,
+    Clock
+} from '@element-plus/icons-vue'
+
+const router = useRouter()
+const route = useRoute()
+
+const isCollapse = ref(false)
+const activeTab = ref(route.path)
+const activeMenu = ref(route.path)
+
+const userInfo = ref({
+    realName: localStorage.getItem('userInfo') ? JSON.parse(localStorage.getItem('userInfo')).realName : ''
+})
+
+const menuList = ref([
+    {
+        path: '/admin/dashboard',
+        title: '首页',
+        icon: markRaw(HomeFilled)
+    },
+    {
+        path: '/admin/profile',
+        title: '个人中心',
+        icon: markRaw(User),
+        children: [
+            {
+                path: '/admin/profile/profile',
+                title: '个人档案',
+                icon: markRaw(User)
+            },
+            {
+                path: '/admin/profile/preferences',
+                title: '偏好设置',
+                icon: markRaw(Setting)
+            },
+            {
+                path: '/admin/profile/security',
+                title: '安全中心',
+                icon: markRaw(Lock)
+            },
+            {
+                path: '/admin/profile/subscription',
+                title: '订阅管理',
+                icon: markRaw(Bell)
+            }
+        ]
+    },
+    {
+        path: '/admin/content',
+        title: '内容管理',
+        icon: markRaw(Document),
+        children: [
+            {
+                path: '/admin/content/article-pub',
+                title: '发布文章',
+                icon: markRaw(Edit)
+            },
+            {
+                path: '/admin/content/article-list',
+                title: '内容列表',
+                icon: markRaw(Document)
+            },
+            {
+                path: '/admin/content/category-manage',
+                title: '分类管理',
+                icon: markRaw(FolderOpened)
+            },
+            {
+                path: '/admin/content/top',
+                title: '置顶管理',
+                icon: markRaw(Top)
+            },
+            {
+                path: '/admin/content/expired',
+                title: '过期内容',
+                icon: markRaw(Clock)
+            }
+        ]
+    },
+    {
+        path: '/admin/content-center',
+        title: '内容中心',
+        icon: markRaw(Grid),
+        children: [
+            {
+                path: '/admin/content-center/category',
+                title: '分类浏览',
+                icon: markRaw(Grid)
+            },
+            {
+                path: '/admin/content-center/search',
+                title: '智能检索',
+                icon: markRaw(Search)
+            },
+            {
+                path: '/admin/content-center/rank',
+                title: '热榜排行',
+                icon: markRaw(TrendCharts)
+            },
+            {
+                path: '/admin/content-center/favorites',
+                title: '我的收藏',
+                icon: markRaw(Star)
+            }
+        ]
+    },
+    {
+        path: '/admin/interaction',
+        title: '互动平台',
+        icon: markRaw(ChatDotRound),
+        children: [
+            {
+                path: '/admin/interaction/interaction',
+                title: '内容互动',
+                icon: markRaw(ChatDotRound)
+            },
+            {
+                path: '/admin/interaction/feedback',
+                title: '意见反馈',
+                icon: markRaw(ChatLineRound)
+            }
+        ]
+    },
+    {
+        path: '/admin/system',
+        title: '系统管理',
+        icon: markRaw(Setting),
+        children: [
+            {
+                path: '/admin/system/user',
+                title: '用户管理',
+                icon: markRaw(User)
+            },
+            {
+                path: '/admin/system/role',
+                title: '角色权限',
+                icon: markRaw(Lock)
+            },
+            {
+                path: '/admin/system/permission',
+                title: '权限管理',
+                icon: markRaw(Lock)
+            },
+            {
+                path: '/admin/system/log',
+                title: '日志审计',
+                icon: markRaw(Document)
+            }
+        ]
+    },
+    {
+        path: '/admin/notification',
+        title: '通知中心',
+        icon: markRaw(Message),
+        children: [
+            {
+                path: '/admin/notification/message',
+                title: '消息通知',
+                icon: markRaw(Message)
+            },
+            {
+                path: '/admin/notification/reminder',
+                title: '定时提醒',
+                icon: markRaw(AlarmClock)
+            },
+            {
+                path: '/admin/notification/broadcast',
+                title: '群发设置',
+                icon: markRaw(Promotion)
+            }
+        ]
+    }
+])
+
+const tabList = ref([
+    {
+        path: '/admin/dashboard',
+        title: '工作台'
+    }
+])
+
+const breadcrumbList = computed(() => {
+    const list = []
+    const path = route.path
+    
+    menuList.value.forEach(menu => {
+        if (menu.path === path) {
+            list.push({ path: menu.path, title: menu.title })
+        } else if (menu.children) {
+            menu.children.forEach(child => {
+                if (child.path === path) {
+                    list.push({ path: menu.path, title: menu.title })
+                    list.push({ path: child.path, title: child.title })
+                }
+            })
+        }
+    })
+    
+    if (list.length === 0) {
+        list.push({ path: path, title: '首页' })
+    }
+    
+    return list
+})
+
+watch(() => route.path, (newPath) => {
+    activeTab.value = newPath
+    activeMenu.value = newPath
+    
+    const exists = tabList.value.find(tab => tab.path === newPath)
+    if (!exists) {
+        const menuItem = findMenuItem(newPath)
+        if (menuItem) {
+            tabList.value.push({ path: newPath, title: menuItem.title })
+        }
+    }
+})
+
+const findMenuItem = (path) => {
+    for (const menu of menuList.value) {
+        if (menu.path === path) {
+            return menu
+        }
+        if (menu.children) {
+            const child = menu.children.find(c => c.path === path)
+            if (child) {
+                return child
+            }
+        }
+    }
+    return null
+}
+
+const handleMenuSelect = (path) => {
+    router.push(path)
+}
+
+const handleTabRemove = (path) => {
+    if (tabList.value.length === 1) {
+        ElMessage.warning('至少保留一个标签页')
+        return
+    }
+    
+    const index = tabList.value.findIndex(tab => tab.path === path)
+    tabList.value.splice(index, 1)
+    
+    if (activeTab.value === path) {
+        const nextTab = tabList.value[index - 1] || tabList.value[0]
+        activeTab.value = nextTab.path
+        router.push(nextTab.path)
+    }
+}
+
+const handleTabClick = (tab) => {
+    router.push(tab.paneName)
+}
+
+const handleLogout = () => {
+    ElMessageBox.confirm('确定要退出登录吗？', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+    }).then(() => {
+        localStorage.removeItem('token')
+        localStorage.removeItem('userInfo')
+        ElMessage.success('退出成功')
+        router.push('/login')
+    }).catch(() => {})
+}
+</script>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
+}
+</style>
