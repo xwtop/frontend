@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Land from '../views/Land.vue'
-import Login from '../views/Login.vue'
-import Register from '../views/Register.vue'
+import Login from '../views/auth/Login.vue'
+import Register from '../views/auth/Register.vue'
 import AdminLayout from '../layouts/AdminLayout.vue'
 import Dashboard from '../views/Dashboard.vue'
 import User from '../views/system/User.vue'
@@ -149,7 +149,7 @@ const routes = [
                 path: 'content/article-list',
                 name: 'ArticleList',
                 component: ArticleList,
-                meta: { title: '内容列表', icon: 'Document', requiresAdmin: true }
+                meta: { title: '文章管理', icon: 'Document', requiresAdmin: true }
             },
             {
                 path: 'content/category-manage',

@@ -47,7 +47,7 @@
                         <el-button type="primary" size="small" :icon="Edit" @click="handleEdit(row)" link>
                             编辑
                         </el-button>
-                        <el-button type="success" size="small" :icon="Key" @click="handleAssignPermission(row)" link>
+                        <el-button type="success" size="small" :icon="Operation" @click="handleAssignPermission(row)" link>
                             分配权限
                         </el-button>
                         <el-button type="danger" size="small" :icon="Delete" @click="handleDelete(row)" link>
@@ -127,7 +127,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search, Refresh, Edit, Delete, Key } from '@element-plus/icons-vue'
+import { Plus, Search, Refresh, Edit, Delete, Operation } from '@element-plus/icons-vue'
 import { roleAPI } from '../../api/role'
 import { permissionAPI } from '../../api/permission'
 

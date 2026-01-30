@@ -151,7 +151,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, UserCircle, Mail, Lock, ArrowRight } from 'lucide-vue-next'
-import { authAPI } from '../utils/auth'
+import { authAPI } from '../../api/auth'
 
 const router = useRouter()
 

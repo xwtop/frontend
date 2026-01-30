@@ -91,7 +91,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Lock, ArrowRight } from 'lucide-vue-next'
-import { authAPI } from '../utils/auth'
+import { authAPI } from '@/api/auth'
 
 const router = useRouter()
 
@@ -110,6 +110,7 @@ const handleLogin = async () => {
         if (response.status === 200) {
             localStorage.setItem('token', response.data.accessToken)
             localStorage.setItem('userInfo', JSON.stringify({
+                userId: response.data.userId,
                 realName: response.data.realName,
                 role: response.data.role
             }))

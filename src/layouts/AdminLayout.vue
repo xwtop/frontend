@@ -16,7 +16,7 @@
                     </div>
                 </div>
                 
-                <div class="flex-1 overflow-y-auto py-4">
+                <div class="flex-1 overflow-y-auto py-4 hide-scrollbar">
                     <el-menu
                         :default-active="activeMenu"
                         :collapse="isCollapse"
@@ -37,7 +37,6 @@
                                     :key="child.path"
                                     :index="child.path"
                                 >
-                                    <component :is="child.icon" class="w-5 h-5" />
                                     <span>{{ child.title }}</span>
                                 </el-menu-item>
                             </el-sub-menu>
@@ -104,7 +103,7 @@
                         </el-tabs>
                     </div>
 
-                    <main class="flex-1 overflow-y-auto">
+                    <main class="flex-1 overflow-y-auto p-2">
                         <router-view v-slot="{ Component }">
                             <transition name="fade" mode="out-in">
                                 <component :is="Component" />
@@ -201,7 +200,7 @@ const menuList = ref([
             },
             {
                 path: '/admin/content/article-list',
-                title: '内容列表',
+                title: '文章管理',
                 icon: markRaw(Document)
             },
             {
@@ -414,6 +413,15 @@ const handleLogout = () => {
 </script>
 
 <style scoped>
+.hide-scrollbar::-webkit-scrollbar {
+    display: none; /* Chrome Safari */
+}
+
+.hide-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
+
 .fade-enter-active,
 .fade-leave-active {
     transition: opacity 0.2s ease;
