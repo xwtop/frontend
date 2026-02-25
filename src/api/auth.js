@@ -11,5 +11,9 @@ export const authAPI = {
 
     logout() {
         return api.post('/auth/logout')
+    },
+
+    changePassword(oldPassword, newPassword, confirmPassword) {
+        return api.post('/auth/changePassword', { oldPassword, newPassword, confirmPassword })
     }
 }

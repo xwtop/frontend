@@ -31,21 +31,26 @@
                 </div>
             </div>
 
-            <div class="flex-1 overflow-y-auto min-h-0">
-                <div class="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-6" v-loading="loading">
-                    <article-card
-                        v-for="article in articles"
-                        :key="article.id"
-                        :article="article"
-                        @view="handleViewArticle"
-                        @edit="handleEdit"
-                        @refresh="loadArticles"
-                        class="break-inside-avoid mb-6"
-                    />
-                </div>
+            <div class="flex-1 overflow-y-auto min-h-0 hide-scrollbar">
+                <masonry-layout :items="articles" :column-count="getColumnCount()" :key="activeTab">
+                    <template #default="{ item }">
+                        <article-card
+                            :article="item"
+                            @view="handleViewArticle"
+                            @edit="handleEdit"
+                            @refresh="loadArticles"
+                        />
+                    </template>
+                </masonry-layout>
                 
                 <div class="flex justify-center items-center py-12" v-if="!articles.length && !loading">
                     <el-empty description="暂无文章" />
+                </div>
+                
+                <div class="flex justify-center items-center py-8" v-if="loading && articles.length > 0">
+                    <el-icon class="is-loading" :size="32">
+                        <Loading />
+                    </el-icon>
                 </div>
             </div>
         </div>
@@ -80,12 +85,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Search } from '@element-plus/icons-vue'
+import { Search, Loading } from '@element-plus/icons-vue'
 import ArticleEditor from '@/components/ArticleEditor.vue'
 import ArticleCard from '@/components/ArticleCard.vue'
 import ArticleDetail from '@/components/ArticleDetail.vue'
+import MasonryLayout from '@/components/MasonryLayout.vue'
 import { articleAPI } from '@/api/article'
 
 const activeTab = ref('published')
@@ -95,9 +101,9 @@ const editorVisible = ref(false)
 const currentArticleId = ref(null)
 const detailVisible = ref(false)
 const currentDetailArticleId = ref(null)
+const windowWidth = ref(window.innerWidth)
 
 const articles = ref([])
-const total = ref(0)
 
 const getStatusValue = () => {
     switch (activeTab.value) {
@@ -121,18 +127,24 @@ const handleSearch = () => {
 }
 
 const loadArticles = async () => {
+    if (loading.value) return
     loading.value = true
+    
+    // 先清空文章列表，避免显示旧数据
+    articles.value = []
+    
     try {
         const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
         const res = await articleAPI.getList({
             author_id: userInfo.userId,
             status: getStatusValue(),
-            title: searchKeyword.value
+            title: searchKeyword.value,
+            page: 1,
+            page_size: 100
         })
         
-        // 处理后端返回的数据结构，转换字段名
         const articleList = res.data.list || []
-        articles.value = articleList.map(article => ({
+        const newArticles = articleList.map(article => ({
             id: article.id,
             categoryId: article.categoryId,
             title: article.title,
@@ -150,14 +162,26 @@ const loadArticles = async () => {
             createTime: article.createTime,
             updateTime: article.updateTime || article.createTime
         }))
-        total.value = res.data.total || 0
+        
+        articles.value = newArticles
     } catch (error) {
+        console.error('加载文章失败:', error)
         ElMessage.error('加载失败')
         articles.value = []
-        total.value = 0
     } finally {
         loading.value = false
     }
+}
+
+const getColumnCount = () => {
+    if (windowWidth.value >= 1536) return 4
+    if (windowWidth.value >= 1024) return 3
+    if (windowWidth.value >= 768) return 2
+    return 1
+}
+
+const handleResize = () => {
+    windowWidth.value = window.innerWidth
 }
 
 const handleAdd = () => {
@@ -185,10 +209,39 @@ const handleCloseDetail = () => {
 
 onMounted(() => {
     loadArticles()
+    window.addEventListener('resize', handleResize)
+})
+
+onUnmounted(() => {
+    window.removeEventListener('resize', handleResize)
 })
 </script>
 
 <style scoped>
+/* 隐藏滚动条但保留滚动功能 */
+.hide-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+.hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* 加载动画 */
+.is-loading {
+    animation: rotate 1s linear infinite;
+}
+
+@keyframes rotate {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 /* 标签页样式美化 */
 :deep(.el-tabs__header) {
     background: transparent;

@@ -85,7 +85,7 @@
                     <el-input v-model="form.name" placeholder="请输入权限名称" />
                 </el-form-item>
                 <el-form-item label="权限编码" prop="code">
-                    <el-input v-model="form.code" placeholder="请输入权限编码" :disabled="isEdit" />
+                    <el-input v-model="form.code" placeholder="请输入权限编码" />
                 </el-form-item>
                 <el-form-item label="类型" prop="type">
                     <el-radio-group v-model="form.type">
@@ -171,7 +171,8 @@ const handleSearch = async () => {
             ElMessage.error(response.statusText || '获取权限列表失败')
         }
     } catch (error) {
-        ElMessage.error(error.message || '获取权限列表失败')
+        const errorMessage = error.response?.data?.statusText || error.response?.data?.message || error.message || '获取权限列表失败'
+        ElMessage.error(errorMessage)
     } finally {
         loading.value = false
     }
@@ -236,7 +237,8 @@ const handleDelete = (row) => {
                 ElMessage.error(response.statusText || '删除失败')
             }
         } catch (error) {
-            ElMessage.error(error.message || '删除失败')
+            const errorMessage = error.response?.data?.statusText || error.response?.data?.message || error.message || '删除失败'
+            ElMessage.error(errorMessage)
         }
     }).catch(() => {})
 }
@@ -267,7 +269,8 @@ const handleBatchDelete = () => {
                 ElMessage.error(response.statusText || '批量删除失败')
             }
         } catch (error) {
-            ElMessage.error(error.message || '批量删除失败')
+            const errorMessage = error.response?.data?.statusText || error.response?.data?.message || error.message || '批量删除失败'
+            ElMessage.error(errorMessage)
         }
     }).catch(() => {})
 }
@@ -290,7 +293,8 @@ const handleSubmit = async () => {
             ElMessage.error(response.statusText || '操作失败')
         }
     } catch (error) {
-        ElMessage.error(error.message || '操作失败')
+        const errorMessage = error.response?.data?.statusText || error.response?.data?.message || error.message || '操作失败'
+        ElMessage.error(errorMessage)
     } finally {
         submitLoading.value = false
     }

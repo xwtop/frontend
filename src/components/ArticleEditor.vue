@@ -222,8 +222,6 @@ const loadArticle = async () => {
         form.categoryId = article.categoryId || ''
         form.content = article.content || ''
         
-        console.log('加载文章，article.categoryId:', article.categoryId, 'form.categoryId:', form.categoryId)
-        
         // 加载分类信息
         if (form.categoryId) {
             try {
@@ -357,7 +355,7 @@ const handlePublish = async () => {
             title: form.title,
             sub_title: form.subTitle,
             content: form.content,
-            status: 1,
+            status: 0,
             author_id: userInfo.userId,
             author_name: userInfo.realName
         }
@@ -370,13 +368,17 @@ const handlePublish = async () => {
             data.category_id = form.categoryId
         }
         
-        console.log('发布文章，form.categoryId:', form.categoryId, 'data:', data)
+        let articleId = props.articleId
         
         if (props.articleId) {
             await articleAPI.update({ id: props.articleId, ...data })
-            ElMessage.success('文章发布成功')
         } else {
-            await articleAPI.create(data)
+            const result = await articleAPI.create(data)
+            articleId = result.data
+        }
+        
+        if (articleId) {
+            await articleAPI.publish(articleId)
             ElMessage.success('文章发布成功')
         }
         

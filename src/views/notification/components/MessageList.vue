@@ -1,12 +1,12 @@
 <template>
     <div class="message-list">
-        <div v-for="item in data" :key="item.id" class="message-item" :class="{ 'unread': item.status === 'unread' }">
+        <div v-for="item in data" :key="item.id" class="message-item" :class="{ 'unread': item.status === 'unread' }" @click="handleClick(item)">
             <div class="message-header">
                 <div class="message-title">
                     <span class="message-type">{{ getTypeIcon(item.type) }}</span>
                     <span>{{ item.title }}</span>
                 </div>
-                <div class="message-actions">
+                <div class="message-actions" @click.stop>
                     <el-button v-if="item.status === 'unread'" type="primary" size="small" link @click="$emit('mark-read', item.id)">
                         标记已读
                     </el-button>
@@ -15,7 +15,7 @@
             </div>
             <div class="message-content">{{ item.content }}</div>
             <div class="message-footer">
-                <span class="message-time">{{ item.createTime }}</span>
+                <span class="message-time">{{ formatTime(item.createTime) }}</span>
                 <el-tag v-if="item.status === 'unread'" type="danger" size="small">未读</el-tag>
             </div>
         </div>
@@ -31,7 +31,7 @@ defineProps({
     }
 })
 
-defineEmits(['mark-read', 'delete'])
+const emit = defineEmits(['mark-read', 'delete', 'click'])
 
 const getTypeIcon = (type) => {
     const icons = {
@@ -41,6 +41,15 @@ const getTypeIcon = (type) => {
         announcement: '📢'
     }
     return icons[type] || '📄'
+}
+
+const formatTime = (time) => {
+    if (!time) return ''
+    return time.replace('T', ' ')
+}
+
+const handleClick = (item) => {
+    emit('click', item)
 }
 </script>
 

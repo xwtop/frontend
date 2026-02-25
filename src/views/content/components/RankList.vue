@@ -1,12 +1,26 @@
 <template>
     <div class="rank-list">
-        <div v-for="item in data" :key="item.rank" class="rank-item">
+        <div v-for="item in data" :key="item.rank" class="rank-item" @click="handleItemClick(item)">
             <div class="rank-number" :class="'rank-' + item.rank">{{ item.rank }}</div>
             <div class="rank-content">
                 <div class="rank-title">{{ item.title }}</div>
                 <div class="rank-stats">
                     <span>👁️ {{ item.views }}</span>
                     <span>👍 {{ item.likes }}</span>
+                    <span>💬 {{ item.comments || 0 }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 文章详情弹窗 -->
+        <div v-if="showDetail" class="fixed inset-0 z-[2000]">
+            <div class="absolute inset-0 bg-black bg-opacity-50" @click="handleCloseDetail"></div>
+            <div class="absolute inset-0 flex items-center justify-center p-4">
+                <div class="w-full h-full max-w-full max-h-full bg-white rounded-lg shadow-2xl overflow-hidden">
+                    <ArticleDetail
+                        :article-id="selectedArticleId"
+                        @close="handleCloseDetail"
+                    />
                 </div>
             </div>
         </div>
@@ -14,12 +28,28 @@
 </template>
 
 <script setup>
-defineProps({
+import { ref } from 'vue'
+import ArticleDetail from '@/components/ArticleDetail.vue'
+
+const props = defineProps({
     data: {
         type: Array,
         required: true
     }
 })
+
+const showDetail = ref(false)
+const selectedArticleId = ref(null)
+
+const handleItemClick = (item) => {
+    selectedArticleId.value = item.id
+    showDetail.value = true
+}
+
+const handleCloseDetail = () => {
+    showDetail.value = false
+    selectedArticleId.value = null
+}
 </script>
 
 <style scoped>
@@ -33,10 +63,12 @@ defineProps({
     padding: 15px;
     border-bottom: 1px solid #ebeef5;
     transition: all 0.3s;
+    cursor: pointer;
 }
 
 .rank-item:hover {
     background-color: #f5f7fa;
+    transform: translateX(5px);
 }
 
 .rank-number {

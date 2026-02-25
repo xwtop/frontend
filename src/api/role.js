@@ -23,13 +23,5 @@ export const roleAPI = {
     
     delete(ids) {
         return request.delete(`/sysRole/${ids}/delete`)
-    },
-
-    getPermissions(roleId) {
-        return request.get(`/sysRole/${roleId}/permissions`)
-    },
-
-    assignPermissions(roleId, permissionIds) {
-        return request.post(`/sysRole/${roleId}/assignPermission`, { permissionIds })
     }
 }

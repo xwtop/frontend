@@ -56,14 +56,10 @@
                         </el-tag>
                     </template>
                 </el-table-column>
-                <el-table-column prop="createTime" label="创建时间" width="180" align="center" />
-                <el-table-column label="操作" width="240" fixed="right" align="center">
+                <el-table-column label="操作" width="160" fixed="right" align="center">
                     <template #default="{ row }">
                         <el-button type="primary" size="small" :icon="Edit" @click="handleEdit(row)" link>
                             编辑
-                        </el-button>
-                        <el-button type="warning" size="small" :icon="Key" @click="handleResetPassword(row)" link>
-                            修改密码
                         </el-button>
                         <el-button type="danger" size="small" :icon="Delete" @click="handleDelete(row)" link>
                             删除
@@ -171,47 +167,22 @@
                 <el-button type="primary" @click="handleSubmit" :loading="submitLoading">确定</el-button>
             </template>
         </el-dialog>
-
-        <el-dialog
-            v-model="passwordDialogVisible"
-            title="修改密码"
-            width="500px"
-            @close="handlePasswordDialogClose"
-        >
-            <el-form :model="passwordForm" :rules="passwordRules" ref="passwordFormRef" label-width="100px">
-                <el-form-item label="用户">
-                    <el-input v-model="currentUser.realName" disabled />
-                </el-form-item>
-                <el-form-item label="新密码" prop="password">
-                    <el-input v-model="passwordForm.password" type="password" placeholder="请输入新密码" />
-                </el-form-item>
-                <el-form-item label="确认密码" prop="confirmPassword">
-                    <el-input v-model="passwordForm.confirmPassword" type="password" placeholder="请再次输入密码" />
-                </el-form-item>
-            </el-form>
-            <template #footer>
-                <el-button @click="passwordDialogVisible = false">取消</el-button>
-                <el-button type="primary" @click="handleResetPasswordSubmit" :loading="submitLoading">确定</el-button>
-            </template>
-        </el-dialog>
     </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search, Refresh, Edit, Delete, Key } from '@element-plus/icons-vue'
-import { userAPI } from '../../api/user'
-import { roleAPI } from '../../api/role'
+import { Plus, Search, Refresh, Edit, Delete } from '@element-plus/icons-vue'
+import { userAPI } from '@/api/user'
+import { roleAPI } from '@/api/role'
 
 const loading = ref(false)
 const submitLoading = ref(false)
 const dialogVisible = ref(false)
-const passwordDialogVisible = ref(false)
 const dialogTitle = ref('')
 const isEdit = ref(false)
 const formRef = ref(null)
-const passwordFormRef = ref(null)
 
 const queryForm = reactive({
     username: '',
@@ -235,11 +206,6 @@ const form = reactive({
     status: 1
 })
 
-const passwordForm = reactive({
-    password: '',
-    confirmPassword: ''
-})
-
 const currentUser = ref({})
 
 const rules = {
@@ -250,26 +216,6 @@ const rules = {
         { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' }
     ],
     password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
-}
-
-const passwordRules = {
-    password: [
-        { required: true, message: '请输入新密码', trigger: 'blur' },
-        { min: 6, message: '密码长度不能少于6位', trigger: 'blur' }
-    ],
-    confirmPassword: [
-        { required: true, message: '请再次输入密码', trigger: 'blur' },
-        {
-            validator: (rule, value, callback) => {
-                if (value !== passwordForm.password) {
-                    callback(new Error('两次输入的密码不一致'))
-                } else {
-                    callback()
-                }
-            },
-            trigger: 'blur'
-        }
-    ]
 }
 
 const tableData = ref([])
@@ -293,7 +239,8 @@ const handleSearch = async () => {
             ElMessage.error(response.statusText || '获取用户列表失败')
         }
     } catch (error) {
-        ElMessage.error(error.message || '获取用户列表失败')
+        const errorMessage = error.response?.data?.statusText || error.response?.data?.message || error.message || '获取用户列表失败'
+        ElMessage.error(errorMessage)
     } finally {
         loading.value = false
     }
@@ -362,7 +309,8 @@ const handleDelete = (row) => {
                 ElMessage.error(response.statusText || '删除失败')
             }
         } catch (error) {
-            ElMessage.error(error.message || '删除失败')
+            const errorMessage = error.response?.data?.statusText || error.response?.data?.message || error.message || '删除失败'
+            ElMessage.error(errorMessage)
         }
     }).catch(() => {})
 }
@@ -393,7 +341,8 @@ const handleBatchDelete = () => {
                 ElMessage.error(response.statusText || '批量删除失败')
             }
         } catch (error) {
-            ElMessage.error(error.message || '批量删除失败')
+            const errorMessage = error.response?.data?.statusText || error.response?.data?.message || error.message || '批量删除失败'
+            ElMessage.error(errorMessage)
         }
     }).catch(() => {})
 }
@@ -416,7 +365,8 @@ const handleSubmit = async () => {
             ElMessage.error(response.statusText || '操作失败')
         }
     } catch (error) {
-        ElMessage.error(error.message || '操作失败')
+        const errorMessage = error.response?.data?.statusText || error.response?.data?.message || error.message || '操作失败'
+        ElMessage.error(errorMessage)
     } finally {
         submitLoading.value = false
     }
@@ -424,35 +374,6 @@ const handleSubmit = async () => {
 
 const handleDialogClose = () => {
     formRef.value?.resetFields()
-}
-
-const handleResetPassword = (row) => {
-    currentUser.value = row
-    passwordForm.password = ''
-    passwordForm.confirmPassword = ''
-    passwordDialogVisible.value = true
-}
-
-const handleResetPasswordSubmit = async () => {
-    await passwordFormRef.value.validate()
-    submitLoading.value = true
-    try {
-        const response = await userAPI.resetPassword(currentUser.value.id, passwordForm.password)
-        if (response.status === 200) {
-            ElMessage.success('修改密码成功')
-            passwordDialogVisible.value = false
-        } else {
-            ElMessage.error(response.statusText || '修改密码失败')
-        }
-    } catch (error) {
-        ElMessage.error(error.message || '修改密码失败')
-    } finally {
-        submitLoading.value = false
-    }
-}
-
-const handlePasswordDialogClose = () => {
-    passwordFormRef.value?.resetFields()
 }
 
 const getRoleList = async () => {

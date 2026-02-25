@@ -10,25 +10,33 @@
         <!-- 右上角菜单按钮 -->
         <div class="absolute top-3 right-3 z-10" @click.stop>
             <el-dropdown @command="handleMenuCommand" trigger="click">
-                <el-button :icon="MoreFilled" circle size="small" class="bg-white/80 backdrop-blur-sm hover:bg-white" />
+                <el-button circle size="small" class="bg-white/80 backdrop-blur-sm hover:bg-white">
+                    <MoreVertical class="w-4 h-4" />
+                </el-button>
                 <template #dropdown>
                     <el-dropdown-menu>
-                        <el-dropdown-item command="edit" :icon="Edit">
+                        <el-dropdown-item command="edit">
+                            <Edit class="w-4 h-4 mr-2" />
                             编辑
                         </el-dropdown-item>
-                        <el-dropdown-item command="top" :icon="Top" v-if="article.isTop !== 1">
+                        <el-dropdown-item command="top" v-if="article.isTop !== 1">
+                            <ArrowUp class="w-4 h-4 mr-2" />
                             置顶
                         </el-dropdown-item>
-                        <el-dropdown-item command="untop" :icon="Bottom" v-else>
+                        <el-dropdown-item command="untop" v-else>
+                            <ArrowDown class="w-4 h-4 mr-2" />
                             取消置顶
                         </el-dropdown-item>
-                        <el-dropdown-item command="unpublish" :icon="Download" v-if="article.status === 1">
+                        <el-dropdown-item command="unpublish" v-if="article.status === 1">
+                            <Download class="w-4 h-4 mr-2" />
                             下架
                         </el-dropdown-item>
-                        <el-dropdown-item command="publish" :icon="Promotion" v-if="article.status === 0 || article.status === 2">
+                        <el-dropdown-item command="publish" v-if="article.status === 0 || article.status === 2">
+                            <Send class="w-4 h-4 mr-2" />
                             发布
                         </el-dropdown-item>
-                        <el-dropdown-item command="delete" :icon="Delete" divided>
+                        <el-dropdown-item command="delete" divided>
+                            <Trash2 class="w-4 h-4 mr-2" />
                             删除
                         </el-dropdown-item>
                     </el-dropdown-menu>
@@ -47,25 +55,25 @@
             </p>
             <div class="flex flex-wrap gap-4 mb-4 pb-4 border-b border-purple-100">
                 <div class="flex items-center gap-2 text-sm text-gray-600">
-                    <el-icon><User /></el-icon>
+                    <User class="w-4 h-4" />
                     <span>{{ article.authorName || '-' }}</span>
                 </div>
                 <div class="flex items-center gap-2 text-sm text-gray-600">
-                    <el-icon><Calendar /></el-icon>
+                    <Calendar class="w-4 h-4" />
                     <span>{{ formatDate(article.publishTime || article.updateTime) }}</span>
                 </div>
             </div>
-            <div class="flex gap-3 flex-wrap">
+            <div class="flex gap-3 flex-wrap justify-between items-center">
                 <div class="flex items-center gap-2 text-sm text-gray-500 px-3 py-1.5 bg-purple-50 rounded-md hover:bg-purple-100 hover:text-purple-700 transition-colors">
-                    <el-icon><View /></el-icon>
+                    <Eye class="w-4 h-4" />
                     <span>{{ article.viewCount || 0 }}</span>
                 </div>
                 <div class="flex items-center gap-2 text-sm text-gray-500 px-3 py-1.5 bg-purple-50 rounded-md hover:bg-purple-100 hover:text-purple-700 transition-colors">
-                    <el-icon><Star /></el-icon>
+                    <Heart class="w-4 h-4" />
                     <span>{{ article.likeCount || 0 }}</span>
                 </div>
                 <div class="flex items-center gap-2 text-sm text-gray-500 px-3 py-1.5 bg-purple-50 rounded-md hover:bg-purple-100 hover:text-purple-700 transition-colors">
-                    <el-icon><ChatDotRound /></el-icon>
+                    <MessageSquare class="w-4 h-4" />
                     <span>{{ article.commentCount || 0 }}</span>
                 </div>
             </div>
@@ -76,7 +84,20 @@
 <script setup>
 import { ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Edit, MoreFilled, Top, Bottom, Download, Delete, User, Calendar, View, Star, ChatDotRound, Promotion } from '@element-plus/icons-vue'
+import { 
+    Edit, 
+    MoreVertical, 
+    ArrowUp, 
+    ArrowDown, 
+    Download, 
+    Trash2, 
+    User, 
+    Calendar, 
+    Eye, 
+    Heart, 
+    MessageSquare, 
+    Send 
+} from 'lucide-vue-next'
 import { articleAPI } from '@/api/article'
 
 const props = defineProps({

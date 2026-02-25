@@ -41,14 +41,20 @@
                         </el-tag>
                     </template>
                 </el-table-column>
-                <el-table-column prop="createTime" label="创建时间" width="180" align="center" />
-                <el-table-column label="操作" width="240" fixed="right" align="center">
+                <el-table-column label="角色权限" min-width="300" align="center">
+                    <template #default="{ row }">
+                        <div v-if="row.permissions && row.permissions.length > 0" class="permission-tags">
+                            <el-tag v-for="perm in row.permissions" :key="perm.id" size="small" class="permission-tag">
+                                {{ perm.name }}
+                            </el-tag>
+                        </div>
+                        <span v-else class="text-gray-400">暂无权限</span>
+                    </template>
+                </el-table-column>
+                <el-table-column label="操作" width="160" fixed="right" align="center">
                     <template #default="{ row }">
                         <el-button type="primary" size="small" :icon="Edit" @click="handleEdit(row)" link>
                             编辑
-                        </el-button>
-                        <el-button type="success" size="small" :icon="Operation" @click="handleAssignPermission(row)" link>
-                            分配权限
                         </el-button>
                         <el-button type="danger" size="small" :icon="Delete" @click="handleDelete(row)" link>
                             删除
@@ -72,53 +78,54 @@
         <el-dialog
             v-model="dialogVisible"
             :title="dialogTitle"
-            width="600px"
+            width="800px"
             @close="handleDialogClose"
         >
             <el-form :model="form" :rules="rules" ref="formRef" label-width="100px">
-                <el-form-item label="角色名称" prop="name">
-                    <el-input v-model="form.name" placeholder="请输入角色名称" />
-                </el-form-item>
-                <el-form-item label="角色编码" prop="code">
-                    <el-input v-model="form.code" placeholder="请输入角色编码" :disabled="isEdit" />
-                </el-form-item>
-                <el-form-item label="显示顺序" prop="sort">
-                    <el-input-number v-model="form.sort" :min="0" placeholder="请输入显示顺序" style="width: 100%" />
-                </el-form-item>
+                <el-row :gutter="20">
+                    <el-col :span="12">
+                        <el-form-item label="角色名称" prop="name">
+                            <el-input v-model="form.name" placeholder="请输入角色名称" />
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="角色编码" prop="code">
+                            <el-input v-model="form.code" placeholder="请输入角色编码" :disabled="isEdit" />
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+                <el-row :gutter="20">
+                    <el-col :span="12">
+                        <el-form-item label="显示顺序" prop="sort">
+                            <el-input-number v-model="form.sort" :min="0" placeholder="请输入显示顺序" style="width: 100%" />
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="状态" prop="status">
+                            <el-radio-group v-model="form.status">
+                                <el-radio :value="1">启用</el-radio>
+                                <el-radio :value="0">禁用</el-radio>
+                            </el-radio-group>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
                 <el-form-item label="备注" prop="remark">
                     <el-input v-model="form.remark" type="textarea" :rows="3" placeholder="请输入备注" />
                 </el-form-item>
-                <el-form-item label="状态" prop="status">
-                    <el-radio-group v-model="form.status">
-                        <el-radio :value="1">启用</el-radio>
-                        <el-radio :value="0">禁用</el-radio>
-                    </el-radio-group>
+                <el-form-item label="权限" prop="permission_ids">
+                    <el-select v-model="form.permission_ids" multiple placeholder="请选择权限" style="width: 100%">
+                        <el-option
+                            v-for="perm in permissionList"
+                            :key="perm.id"
+                            :label="perm.name"
+                            :value="perm.id"
+                        />
+                    </el-select>
                 </el-form-item>
             </el-form>
             <template #footer>
                 <el-button @click="dialogVisible = false">取消</el-button>
                 <el-button type="primary" @click="handleSubmit" :loading="submitLoading">确定</el-button>
-            </template>
-        </el-dialog>
-
-        <el-dialog
-            v-model="permissionDialogVisible"
-            title="分配权限"
-            width="800px"
-            @close="handlePermissionDialogClose"
-        >
-            <el-transfer
-                v-model="selectedPermissionIds"
-                :data="allPermissions"
-                :titles="['可选权限', '已选权限']"
-                :button-texts="['移除', '添加']"
-                filterable
-                filter-placeholder="搜索权限"
-                :props="{ key: 'id', label: 'name' }"
-            />
-            <template #footer>
-                <el-button @click="permissionDialogVisible = false">取消</el-button>
-                <el-button type="primary" @click="handleAssignPermissionSubmit" :loading="assignLoading">确定</el-button>
             </template>
         </el-dialog>
     </div>
@@ -127,15 +134,13 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search, Refresh, Edit, Delete, Operation } from '@element-plus/icons-vue'
+import { Plus, Search, Refresh, Edit, Delete } from '@element-plus/icons-vue'
 import { roleAPI } from '../../api/role'
 import { permissionAPI } from '../../api/permission'
 
 const loading = ref(false)
 const submitLoading = ref(false)
-const assignLoading = ref(false)
 const dialogVisible = ref(false)
-const permissionDialogVisible = ref(false)
 const dialogTitle = ref('')
 const isEdit = ref(false)
 const formRef = ref(null)
@@ -154,7 +159,8 @@ const form = reactive({
     code: '',
     remark: '',
     sort: 0,
-    status: 1
+    status: 1,
+    permission_ids: []
 })
 
 const rules = {
@@ -165,10 +171,7 @@ const rules = {
 const tableData = ref([])
 const total = ref(0)
 const selectedRows = ref([])
-
-const currentRoleId = ref(null)
-const allPermissions = ref([])
-const selectedPermissionIds = ref([])
+const permissionList = ref([])
 
 const handleSearch = async () => {
     loading.value = true
@@ -181,7 +184,8 @@ const handleSearch = async () => {
             ElMessage.error(response.statusText || '获取角色列表失败')
         }
     } catch (error) {
-        ElMessage.error(error.message || '获取角色列表失败')
+        const errorMessage = error.response?.data?.statusText || error.response?.data?.message || error.message || '获取角色列表失败'
+        ElMessage.error(errorMessage)
     } finally {
         loading.value = false
     }
@@ -195,30 +199,34 @@ const handleReset = () => {
     handleSearch()
 }
 
-const handleAdd = () => {
+const handleAdd = async () => {
     dialogTitle.value = '新增角色'
     isEdit.value = false
+    await getPermissionList()
     Object.assign(form, {
         id: null,
         name: '',
         code: '',
         remark: '',
         sort: 0,
-        status: 1
+        status: 1,
+        permission_ids: []
     })
     dialogVisible.value = true
 }
 
-const handleEdit = (row) => {
+const handleEdit = async (row) => {
     dialogTitle.value = '编辑角色'
     isEdit.value = true
+    await getPermissionList()
     Object.assign(form, {
         id: row.id,
         name: row.name,
         code: row.code,
         remark: row.remark,
         sort: row.sort,
-        status: row.status
+        status: row.status,
+        permission_ids: row.permissions ? row.permissions.map(p => p.id) : []
     })
     dialogVisible.value = true
 }
@@ -238,7 +246,8 @@ const handleDelete = (row) => {
                 ElMessage.error(response.statusText || '删除失败')
             }
         } catch (error) {
-            ElMessage.error(error.message || '删除失败')
+            const errorMessage = error.response?.data?.statusText || error.response?.data?.message || error.message || '删除失败'
+            ElMessage.error(errorMessage)
         }
     }).catch(() => {})
 }
@@ -269,7 +278,8 @@ const handleBatchDelete = () => {
                 ElMessage.error(response.statusText || '批量删除失败')
             }
         } catch (error) {
-            ElMessage.error(error.message || '批量删除失败')
+            const errorMessage = error.response?.data?.statusText || error.response?.data?.message || error.message || '批量删除失败'
+            ElMessage.error(errorMessage)
         }
     }).catch(() => {})
 }
@@ -292,7 +302,8 @@ const handleSubmit = async () => {
             ElMessage.error(response.statusText || '操作失败')
         }
     } catch (error) {
-        ElMessage.error(error.message || '操作失败')
+        const errorMessage = error.response?.data?.statusText || error.response?.data?.message || error.message || '操作失败'
+        ElMessage.error(errorMessage)
     } finally {
         submitLoading.value = false
     }
@@ -302,64 +313,15 @@ const handleDialogClose = () => {
     formRef.value?.resetFields()
 }
 
-const handleAssignPermission = async (row) => {
-    currentRoleId.value = row.id
-    assignLoading.value = true
+const getPermissionList = async () => {
     try {
-        const [permissionsRes, rolePermissionsRes] = await Promise.all([
-            permissionAPI.listAll(),
-            roleAPI.getPermissions(row.id)
-        ])
-
-        if (permissionsRes.status === 200) {
-            allPermissions.value = permissionsRes.data.map(perm => ({
-                id: perm.id,
-                name: perm.name,
-                code: perm.code,
-                type: perm.type,
-                disabled: perm.status === 0
-            }))
-        } else {
-            ElMessage.error('获取权限列表失败')
-            return
-        }
-
-        if (rolePermissionsRes.status === 200) {
-            selectedPermissionIds.value = rolePermissionsRes.data.map(perm => perm.id)
-        } else {
-            ElMessage.error('获取角色权限失败')
-            return
-        }
-
-        permissionDialogVisible.value = true
-    } catch (error) {
-        ElMessage.error(error.message || '获取权限数据失败')
-    } finally {
-        assignLoading.value = false
-    }
-}
-
-const handleAssignPermissionSubmit = async () => {
-    assignLoading.value = true
-    try {
-        const response = await roleAPI.assignPermissions(currentRoleId.value, selectedPermissionIds.value)
+        const response = await permissionAPI.listAll()
         if (response.status === 200) {
-            ElMessage.success('权限分配成功')
-            permissionDialogVisible.value = false
-        } else {
-            ElMessage.error(response.statusText || '权限分配失败')
+            permissionList.value = response.data
         }
     } catch (error) {
-        ElMessage.error(error.message || '权限分配失败')
-    } finally {
-        assignLoading.value = false
+        console.error('获取权限列表失败', error)
     }
-}
-
-const handlePermissionDialogClose = () => {
-    currentRoleId.value = null
-    allPermissions.value = []
-    selectedPermissionIds.value = []
 }
 
 onMounted(() => {
@@ -370,6 +332,22 @@ onMounted(() => {
 <style scoped>
 .el-tag {
     margin-right: 4px;
+}
+
+.permission-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    justify-content: center;
+}
+
+.permission-tag {
+    margin: 0;
+    font-size: 12px;
+}
+
+.text-gray-400 {
+    color: #9ca3af;
 }
 
 .search-form {

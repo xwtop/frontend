@@ -65,13 +65,17 @@
                     </div>
                     
                     <div class="flex items-center gap-4">
-                        <el-badge :value="3" class="cursor-pointer">
-                            <el-button :icon="Bell" circle />
+                        <el-badge :value="unreadCount" :hidden="unreadCount === 0" class="cursor-pointer">
+                            <el-button :icon="Bell" circle @click="handleNotificationClick" />
                         </el-badge>
                         <el-dropdown>
                             <div class="flex items-center gap-2 cursor-pointer">
-                                <el-avatar :size="32" class="bg-primary-600">
-                                    {{ userInfo.realName?.charAt(0) || '用' }}
+                                <el-avatar 
+                                    :size="32" 
+                                    :src="userInfo.avatar || 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=user%20avatar%20placeholder&image_size=square'"
+                                    class="bg-primary-600"
+                                >
+                                    {{ !userInfo.avatar && (userInfo.realName?.charAt(0) || '用') }}
                                 </el-avatar>
                                 <span class="text-slate-700 font-medium">{{ userInfo.realName || '用户' }}</span>
                             </div>
@@ -113,13 +117,18 @@
                 </div>
             </div>
         </div>
+
+        <NotificationPanel
+            v-model:visible="showNotificationPanel"
+            @refresh="loadUnreadCount"
+        />
     </div>
 </template>
 
 <script setup>
-import { ref, computed, watch, markRaw } from 'vue'
+import { ref, computed, watch, markRaw, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox, ElNotification } from 'element-plus'
 import {
     Expand,
     Fold,
@@ -139,10 +148,14 @@ import {
     Message,
     AlarmClock,
     Promotion,
-    Edit,
     Top,
     Clock
 } from '@element-plus/icons-vue'
+import { Heart } from 'lucide-vue-next'
+import NotificationPanel from '@/components/NotificationPanel.vue'
+import { notificationAPI } from '@/api/notification'
+import { userAPI } from '@/api/user'
+import socketService from '@/services/socket'
 
 const router = useRouter()
 const route = useRoute()
@@ -150,10 +163,35 @@ const route = useRoute()
 const isCollapse = ref(false)
 const activeTab = ref(route.path)
 const activeMenu = ref(route.path)
+const unreadCount = ref(0)
+const showNotificationPanel = ref(false)
 
 const userInfo = ref({
-    realName: localStorage.getItem('userInfo') ? JSON.parse(localStorage.getItem('userInfo')).realName : ''
+    realName: '',
+    avatar: ''
 })
+
+const loadUserInfo = async () => {
+    try {
+        const userInfoStr = localStorage.getItem('userInfo')
+        if (!userInfoStr) {
+            return
+        }
+        const userInfoData = JSON.parse(userInfoStr)
+        const userId = userInfoData.userId
+        if (!userId) {
+            return
+        }
+        const res = await userAPI.getById(userId)
+        const userData = res.data
+        userInfo.value = {
+            realName: userData.realName || '',
+            avatar: userData.avatar || ''
+        }
+    } catch (error) {
+        console.error('获取用户信息失败:', error)
+    }
+}
 
 const menuList = ref([
     {
@@ -172,98 +210,54 @@ const menuList = ref([
                 icon: markRaw(User)
             },
             {
-                path: '/admin/profile/preferences',
-                title: '偏好设置',
-                icon: markRaw(Setting)
-            },
-            {
-                path: '/admin/profile/security',
-                title: '安全中心',
-                icon: markRaw(Lock)
-            },
-            {
                 path: '/admin/profile/subscription',
                 title: '订阅管理',
                 icon: markRaw(Bell)
+            },
+            {
+                path: '/admin/profile/likes',
+                title: '我的点赞',
+                icon: markRaw(Heart)
             }
         ]
     },
     {
-        path: '/admin/content',
-        title: '内容管理',
-        icon: markRaw(Document),
-        children: [
-            {
-                path: '/admin/content/article-pub',
-                title: '发布文章',
-                icon: markRaw(Edit)
+                path: '/admin/content-center',
+                title: '内容中心',
+                icon: markRaw(Grid),
+                children: [
+                    {
+                        path: '/admin/content/article-list',
+                        title: '文章管理',
+                        icon: markRaw(Document)
+                    },
+                    {
+                        path: '/admin/content/category-manage',
+                        title: '分类管理',
+                        icon: markRaw(FolderOpened)
+                    },
+                    {
+                        path: '/admin/content-center/category',
+                        title: '分类浏览',
+                        icon: markRaw(Grid)
+                    },
+                    {
+                        path: '/admin/content-center/search',
+                        title: '智能检索',
+                        icon: markRaw(Search)
+                    },
+                    {
+                        path: '/admin/content-center/rank',
+                        title: '热榜排行',
+                        icon: markRaw(TrendCharts)
+                    },
+                    {
+                        path: '/admin/content-center/recommendation',
+                        title: '个性推荐',
+                        icon: markRaw(Promotion)
+                    }
+                ]
             },
-            {
-                path: '/admin/content/article-list',
-                title: '文章管理',
-                icon: markRaw(Document)
-            },
-            {
-                path: '/admin/content/category-manage',
-                title: '分类管理',
-                icon: markRaw(FolderOpened)
-            },
-            {
-                path: '/admin/content/top',
-                title: '置顶管理',
-                icon: markRaw(Top)
-            },
-            {
-                path: '/admin/content/expired',
-                title: '过期内容',
-                icon: markRaw(Clock)
-            }
-        ]
-    },
-    {
-        path: '/admin/content-center',
-        title: '内容中心',
-        icon: markRaw(Grid),
-        children: [
-            {
-                path: '/admin/content-center/category',
-                title: '分类浏览',
-                icon: markRaw(Grid)
-            },
-            {
-                path: '/admin/content-center/search',
-                title: '智能检索',
-                icon: markRaw(Search)
-            },
-            {
-                path: '/admin/content-center/rank',
-                title: '热榜排行',
-                icon: markRaw(TrendCharts)
-            },
-            {
-                path: '/admin/content-center/favorites',
-                title: '我的收藏',
-                icon: markRaw(Star)
-            }
-        ]
-    },
-    {
-        path: '/admin/interaction',
-        title: '互动平台',
-        icon: markRaw(ChatDotRound),
-        children: [
-            {
-                path: '/admin/interaction/interaction',
-                title: '内容互动',
-                icon: markRaw(ChatDotRound)
-            },
-            {
-                path: '/admin/interaction/feedback',
-                title: '意见反馈',
-                icon: markRaw(ChatLineRound)
-            }
-        ]
-    },
     {
         path: '/admin/system',
         title: '系统管理',
@@ -276,18 +270,13 @@ const menuList = ref([
             },
             {
                 path: '/admin/system/role',
-                title: '角色权限',
+                title: '角色管理',
                 icon: markRaw(Lock)
             },
             {
                 path: '/admin/system/permission',
                 title: '权限管理',
                 icon: markRaw(Lock)
-            },
-            {
-                path: '/admin/system/log',
-                title: '日志审计',
-                icon: markRaw(Document)
             }
         ]
     },
@@ -305,11 +294,6 @@ const menuList = ref([
                 path: '/admin/notification/reminder',
                 title: '定时提醒',
                 icon: markRaw(AlarmClock)
-            },
-            {
-                path: '/admin/notification/broadcast',
-                title: '群发设置',
-                icon: markRaw(Promotion)
             }
         ]
     }
@@ -349,6 +333,10 @@ const breadcrumbList = computed(() => {
 watch(() => route.path, (newPath) => {
     activeTab.value = newPath
     activeMenu.value = newPath
+    
+    if (newPath === '/admin/notification/message') {
+        loadUnreadCount()
+    }
     
     const exists = tabList.value.find(tab => tab.path === newPath)
     if (!exists) {
@@ -398,17 +386,72 @@ const handleTabClick = (tab) => {
     router.push(tab.paneName)
 }
 
+const loadUnreadCount = async () => {
+    try {
+        const result = await notificationAPI.unreadCount()
+        unreadCount.value = result.data.count || 0
+    } catch (error) {
+        console.error('加载未读通知数量失败', error)
+    }
+}
+
+const handleNewNotification = (notification) => {
+    console.log('[AdminLayout] 收到新通知事件:', notification)
+    unreadCount.value++
+    console.log('[AdminLayout] 未读数量更新为:', unreadCount.value)
+    ElNotification({
+        title: notification.title,
+        message: notification.content,
+        position: 'bottom-right',
+        duration: 4500,
+        type: 'success',
+        showClose: true
+    })
+}
+
+onMounted(() => {
+    loadUnreadCount()
+    loadUserInfo()
+    
+    // 检查当前路由路径是否在标签列表中，如果不在，添加对应的标签
+    const currentPath = route.path
+    const exists = tabList.value.find(tab => tab.path === currentPath)
+    if (!exists) {
+        const menuItem = findMenuItem(currentPath)
+        if (menuItem) {
+            tabList.value = [
+                { path: currentPath, title: menuItem.title }
+            ]
+        }
+    }
+    
+    const token = localStorage.getItem('token')
+    if (token) {
+        socketService.connect(token)
+        socketService.on('new_notification', handleNewNotification)
+    }
+})
+
+onUnmounted(() => {
+    socketService.off('new_notification', handleNewNotification)
+})
+
 const handleLogout = () => {
     ElMessageBox.confirm('确定要退出登录吗？', '提示', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning'
     }).then(() => {
+        socketService.disconnect()
         localStorage.removeItem('token')
         localStorage.removeItem('userInfo')
         ElMessage.success('退出成功')
         router.push('/login')
     }).catch(() => {})
+}
+
+const handleNotificationClick = () => {
+    router.push('/admin/notification/message')
 }
 </script>
 

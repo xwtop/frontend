@@ -6,15 +6,30 @@
                     <span>热榜排行</span>
                 </div>
             </template>
-            <el-tabs v-model="activeTab">
+            <el-tabs v-model="activeTab" @tab-change="handleTabChange">
                 <el-tab-pane label="日榜" name="daily">
-                    <RankList :data="dailyRank" />
+                    <div v-if="loading" class="flex justify-center items-center py-8">
+                        <el-icon class="is-loading" :size="32">
+                            <Loading />
+                        </el-icon>
+                    </div>
+                    <RankList v-else :data="dailyRank" />
                 </el-tab-pane>
                 <el-tab-pane label="周榜" name="weekly">
-                    <RankList :data="weeklyRank" />
+                    <div v-if="loading" class="flex justify-center items-center py-8">
+                        <el-icon class="is-loading" :size="32">
+                            <Loading />
+                        </el-icon>
+                    </div>
+                    <RankList v-else :data="weeklyRank" />
                 </el-tab-pane>
                 <el-tab-pane label="月榜" name="monthly">
-                    <RankList :data="monthlyRank" />
+                    <div v-if="loading" class="flex justify-center items-center py-8">
+                        <el-icon class="is-loading" :size="32">
+                            <Loading />
+                        </el-icon>
+                    </div>
+                    <RankList v-else :data="monthlyRank" />
                 </el-tab-pane>
             </el-tabs>
         </el-card>
@@ -22,34 +37,51 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { Loading } from '@element-plus/icons-vue'
 import RankList from './components/RankList.vue'
+import { articleAPI } from '@/api/article'
 
 const activeTab = ref('daily')
+const loading = ref(false)
 
-const dailyRank = ref([
-    { rank: 1, title: '2026年寒假放假安排', views: 12345, likes: 890 },
-    { rank: 2, title: '校园智慧平台全新上线', views: 9876, likes: 756 },
-    { rank: 3, title: '图书馆开放时间调整通知', views: 7654, likes: 543 },
-    { rank: 4, title: '学生社团招新活动', views: 6543, likes: 432 },
-    { rank: 5, title: '奖学金评定办法说明', views: 5432, likes: 321 }
-])
+const dailyRank = ref([])
+const weeklyRank = ref([])
+const monthlyRank = ref([])
 
-const weeklyRank = ref([
-    { rank: 1, title: '2026年寒假放假安排', views: 45678, likes: 3456 },
-    { rank: 2, title: '校园智慧平台全新上线', views: 34567, likes: 2345 },
-    { rank: 3, title: '图书馆开放时间调整通知', views: 23456, likes: 1234 },
-    { rank: 4, title: '学生社团招新活动', views: 12345, likes: 987 },
-    { rank: 5, title: '奖学金评定办法说明', views: 9876, likes: 654 }
-])
+const loadRankData = async (timeRange) => {
+    loading.value = true
+    try {
+        const res = await articleAPI.getRankArticles(timeRange, 10)
+        if (res.data) {
+            if (timeRange === 'daily') {
+                dailyRank.value = res.data
+            } else if (timeRange === 'weekly') {
+                weeklyRank.value = res.data
+            } else if (timeRange === 'monthly') {
+                monthlyRank.value = res.data
+            }
+        }
+    } catch (error) {
+        console.error('加载热榜数据失败:', error)
+    } finally {
+        loading.value = false
+    }
+}
 
-const monthlyRank = ref([
-    { rank: 1, title: '2026年寒假放假安排', views: 123456, likes: 8765 },
-    { rank: 2, title: '校园智慧平台全新上线', views: 98765, likes: 6543 },
-    { rank: 3, title: '图书馆开放时间调整通知', views: 76543, likes: 4321 },
-    { rank: 4, title: '学生社团招新活动', views: 54321, likes: 3210 },
-    { rank: 5, title: '奖学金评定办法说明', views: 43210, likes: 2109 }
-])
+const handleTabChange = (tab) => {
+    if (!dailyRank.value.length && tab === 'daily') {
+        loadRankData('daily')
+    } else if (!weeklyRank.value.length && tab === 'weekly') {
+        loadRankData('weekly')
+    } else if (!monthlyRank.value.length && tab === 'monthly') {
+        loadRankData('monthly')
+    }
+}
+
+onMounted(() => {
+    loadRankData('daily')
+})
 </script>
 
 <style scoped>

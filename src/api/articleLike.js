@@ -1,12 +1,20 @@
 import request from './request'
 
 export const articleLikeAPI = {
-    toggleLike(data) {
-        return request.post('/articleLike/toggle', data)
+    toggle(articleId) {
+        const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+        return request.post('/articleLike/toggle', {
+            article_id: articleId,
+            user_id: userInfo.userId
+        })
     },
     
-    checkLike(data) {
-        return request.post('/articleLike/check', data)
+    check(articleId) {
+        const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+        return request.post('/articleLike/check', {
+            article_id: articleId,
+            user_id: userInfo.userId
+        })
     },
     
     getArticleLikes(articleId, page = 1, pageSize = 10) {
@@ -15,8 +23,9 @@ export const articleLikeAPI = {
         })
     },
     
-    getUserLikes(userId, page = 1, pageSize = 10) {
-        return request.get(`/articleLike/user/${userId}`, {
+    getUserLikes(page = 1, pageSize = 10) {
+        const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+        return request.get(`/articleLike/user/${userInfo.userId}`, {
             params: { page, pageSize }
         })
     }

@@ -3,7 +3,8 @@
         <!-- 顶部导航栏 -->
         <div class="flex justify-between items-center p-4 border-b">
             <h2 class="text-xl font-semibold">文章详情</h2>
-            <el-button @click="handleClose" type="default" :icon="Close">
+            <el-button @click="handleClose" type="default">
+                <X class="w-5 h-5" />
                 关闭
             </el-button>
         </div>
@@ -24,32 +25,27 @@
                 <!-- 文章元信息 -->
                 <div class="flex items-center gap-6 mb-8 pb-6 border-b">
                     <div class="flex items-center gap-2 text-gray-600">
-                        <el-icon><User /></el-icon>
+                        <User class="w-4 h-4" />
                         <span>{{ article.authorName }}</span>
                     </div>
                     <div class="flex items-center gap-2 text-gray-600">
-                        <el-icon><Calendar /></el-icon>
+                        <Calendar class="w-4 h-4" />
                         <span>{{ formatDate(article.publishTime || article.updateTime) }}</span>
                     </div>
                     <div class="flex items-center gap-4 text-gray-500">
                         <span class="flex items-center gap-1">
-                            <el-icon><View /></el-icon>
+                            <Eye class="w-4 h-4" />
                             {{ article.viewCount || 0 }}
                         </span>
                         <span class="flex items-center gap-1">
-                            <el-icon><Star /></el-icon>
+                            <Heart class="w-4 h-4" />
                             {{ article.likeCount || 0 }}
                         </span>
                         <span class="flex items-center gap-1">
-                            <el-icon><ChatDotRound /></el-icon>
+                            <MessageSquare class="w-4 h-4" />
                             {{ article.commentCount || 0 }}
                         </span>
                     </div>
-                </div>
-                
-                <!-- 封面图片 -->
-                <div v-if="article.coverImage" class="mb-8">
-                    <img :src="article.coverImage" :alt="article.title" class="w-full max-h-96 object-cover rounded-lg" />
                 </div>
                 
                 <!-- Markdown 内容 -->
@@ -67,7 +63,7 @@
                 <!-- 评论列表 -->
                 <div class="flex-1 overflow-y-auto p-4">
                     <div v-if="commentsLoading" class="flex justify-center py-8">
-                        <el-icon class="is-loading"><Loading /></el-icon>
+                        <Loader2 class="w-6 h-6 animate-spin text-gray-400" />
                     </div>
                     
                     <div v-else-if="comments.length === 0" class="text-center py-8 text-gray-500">
@@ -115,9 +111,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Close, User, Calendar, View, Star, ChatDotRound, Delete, Loading } from '@element-plus/icons-vue'
+import { X, Heart, User, Calendar, Eye, MessageSquare, Loader2 } from 'lucide-vue-next'
 import { MdPreview } from 'md-editor-v3'
 import 'md-editor-v3/lib/preview.css'
 import { articleAPI } from '@/api/article'
@@ -173,6 +169,8 @@ const loadArticle = async () => {
             ...result.data,
             id: String(result.data.id)
         }
+        
+        await incrementViewCount()
     } catch (error) {
         ElMessage.error('加载文章失败')
     }
@@ -244,9 +242,21 @@ const handleDeleteComment = async (comment) => {
     }
 }
 
+watch(() => props.articleId, (newId) => {
+    if (newId) {
+        loadArticle()
+        loadComments()
+    }
+}, { immediate: true })
+
+const incrementViewCount = async () => {
+    try {
+        await articleAPI.incrementView(props.articleId)
+    } catch (error) {
+    }
+}
+
 onMounted(() => {
-    loadArticle()
-    loadComments()
 })
 </script>
 

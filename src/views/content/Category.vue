@@ -1,7 +1,7 @@
 <template>
     <div class="bg-gradient-to-br from-slate-50 to-slate-100 w-full h-full flex">
         <div class="flex-1 flex lg:flex-row gap-2">
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 w-full lg:w-48 shrink-1">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 w-full lg:w-52 shrink-1">
                 <h2 class="text-lg font-bold text-slate-900 mb-4">全部分类</h2>
                 <el-input
                     v-model="filterText"
@@ -13,62 +13,67 @@
                         <Search class="w-4 h-4 text-slate-400" />
                     </template>
                 </el-input>
-                <el-tree
-                    ref="categoryTreeRef"
-                    :data="categories"
-                    :props="treeProps"
-                    :expand-on-click-node="false"
-                    :highlight-current="true"
-                    :accordion="true"
-                    :filter-node-method="filterNode"
-                    node-key="id"
-                    @node-click="handleNodeClick"
-                />
+                <div class="flex-1 overflow-y-auto min-h-0 hide-scrollbar">
+                    <el-tree
+                        ref="categoryTreeRef"
+                        :data="categories"
+                        :props="treeProps"
+                        :expand-on-click-node="false"
+                        :highlight-current="true"
+                        :accordion="true"
+                        :filter-node-method="filterNode"
+                        node-key="id"
+                    >
+                    <template #default="{ node, data }">
+                        <div class="custom-tree-node" @click="handleNodeClick(data, node)">
+                            <span class="node-label">{{ node.label }}</span>
+                            <div
+                                v-if="!data.children || data.children.length === 0"
+                                class="star-icon"
+                                :class="{ 'star-active': data.isSubscribed }"
+                                @click.stop="handleSubscribe(data)"
+                            >
+                                <Star :fill="data.isSubscribed ? 'currentColor' : 'none'" class="w-4 h-4" />
+                            </div>
+                        </div>
+                    </template>
+                    </el-tree>
+                </div>
             </div>
 
             <div class="flex-1 min-w-0">
                 <div v-if="selectedCategory" class="bg-white/95 rounded-2xl shadow-sm border border-slate-200 p-6 h-full flex flex-col">
-                    <div class="flex items-center justify-between mb-6">
-                        <h2 class="text-2xl font-bold text-slate-900">{{ selectedCategory.name }}</h2>
-                        <div class="flex gap-2">
-                            <button
-                                v-for="sort in sortOptions"
-                                :key="sort.value"
-                                @click="handleSortChange(sort.value)"
-                                :class="[
-                                    'px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer',
-                                    currentSort === sort.value
-                                        ? 'bg-primary-500 text-white'
-                                        : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-                                ]"
-                            >
-                                {{ sort.label }}
-                            </button>
-                        </div>
-                    </div>
-
-                    <div v-loading="loading" class="flex-1 overflow-y-auto min-h-0">
-                        <div class="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-6">
-                            <article-display-card
-                                v-for="article in articles"
-                                :key="article.id"
-                                :article="article"
-                                @view="handleViewArticle"
-                                class="break-inside-avoid mb-6"
-                            />
-                        </div>
+                    <div v-loading="loading" class="flex-1 overflow-y-auto min-h-0 hide-scrollbar">
+                        <masonry-layout :items="articles" :column-count="getColumnCount()" :key="`category-${selectedCategory?.id || 'all'}`">
+                            <template #default="{ item }">
+                                <article-display-card
+                                    :article="item"
+                                    @view="handleViewArticle"
+                                />
+                            </template>
+                        </masonry-layout>
                         
                         <div class="flex justify-center items-center py-12" v-if="!loading && articles.length === 0">
                             <el-empty description="暂无内容" />
                         </div>
                     </div>
                 </div>
-                <div v-else class="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center h-full flex flex-col items-center justify-center">
-                    <div class="w-20 h-20 bg-primary-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                        <FolderOpen class="w-10 h-10 text-primary-500" />
+
+                <div v-else class="bg-white/95 rounded-2xl shadow-sm border border-slate-200 p-6 h-full flex flex-col">
+                    <div v-loading="loading" class="flex-1 overflow-y-auto min-h-0 hide-scrollbar">
+                        <masonry-layout :items="articles" :column-count="getColumnCount()" :key="'hot'">
+                            <template #default="{ item }">
+                                <article-display-card
+                                    :article="item"
+                                    @view="handleViewArticle"
+                                />
+                            </template>
+                        </masonry-layout>
+                        
+                        <div class="flex justify-center items-center py-12" v-if="!loading && articles.length === 0">
+                            <el-empty description="暂无热门文章" />
+                        </div>
                     </div>
-                    <h3 class="text-xl font-bold text-slate-900 mb-2">选择一个分类</h3>
-                    <p class="text-slate-600">点击左侧分类查看相关内容</p>
                 </div>
             </div>
         </div>
@@ -89,42 +94,37 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { categoryAPI } from '@/api/category'
 import { articleAPI } from '@/api/article'
+import { subscriptionAPI } from '@/api/subscription'
 import {
-    FolderOpen,
-    Search
+    Search,
+    Star
 } from 'lucide-vue-next'
 import ArticleDisplayCard from '@/components/ArticleDisplayCard.vue'
 import ArticleDetail from '@/components/ArticleDetail.vue'
+import MasonryLayout from '@/components/MasonryLayout.vue'
 
 const router = useRouter()
 
 const categoryTreeRef = ref(null)
 const categories = ref([])
 const selectedCategory = ref(null)
-const currentSort = ref('latest')
 const articles = ref([])
 const loading = ref(false)
-const currentPage = ref(1)
-const pageSize = ref(10)
-const total = ref(0)
 const filterText = ref('')
 const detailVisible = ref(false)
 const currentDetailArticleId = ref(null)
+const masonryRef = ref(null)
+const windowWidth = ref(window.innerWidth)
 
 const treeProps = {
     children: 'children',
     label: 'name'
 }
-
-const sortOptions = [
-    { label: '最新', value: 'latest' },
-    { label: '热门', value: 'popular' },
-    { label: '最多浏览', value: 'views' }
-]
 
 watch(filterText, (val) => {
     categoryTreeRef.value?.filter(val)
@@ -140,7 +140,7 @@ const loadCategories = async () => {
         loading.value = true
         const res = await categoryAPI.getTree()
         if (res.status === 200 && res.data) {
-            categories.value = processCategories(res.data)
+            categories.value = await processCategories(res.data)
         }
     } catch (error) {
         console.error('加载分类失败:', error)
@@ -149,55 +149,67 @@ const loadCategories = async () => {
     }
 }
 
-const processCategories = (tree) => {
-    const processNode = (node) => {
-        return {
-            ...node,
-            children: node.children ? node.children.map(processNode) : []
+const processCategories = async (tree) => {
+    const leafCategories = []
+    
+    const collectLeafNodes = (node) => {
+        if (!node.children || node.children.length === 0) {
+            leafCategories.push(node.id)
+        } else {
+            node.children.forEach(collectLeafNodes)
         }
     }
-    return tree.map(node => processNode(node))
+    
+    tree.forEach(collectLeafNodes)
+    
+    let subscribedMap = {}
+    if (leafCategories.length > 0) {
+        try {
+            const result = await subscriptionAPI.batchSubscribed(leafCategories)
+            subscribedMap = result.data || {}
+        } catch (error) {
+            console.error('批量查询订阅状态失败:', error)
+        }
+    }
+    
+    const processNode = (node) => {
+        const processed = {
+            ...node,
+            children: node.children ? node.children.map(processNode) : [],
+            isSubscribed: subscribedMap[node.id] || false
+        }
+        return processed
+    }
+    
+    return tree.map(processNode)
 }
 
-const handleNodeClick = (data) => {
-    selectedCategory.value = data
-    currentPage.value = 1
-    loadArticles()
-}
-
-const handleSortChange = (sort) => {
-    currentSort.value = sort
-    currentPage.value = 1
-    loadArticles()
-}
-
-const handlePageChange = (page) => {
-    currentPage.value = page
-    loadArticles()
-}
-
-const handleSizeChange = (size) => {
-    pageSize.value = size
-    currentPage.value = 1
-    loadArticles()
+const handleNodeClick = (data, node) => {
+    if (!data.children || data.children.length === 0) {
+        selectedCategory.value = data
+        articles.value = []
+        loadArticles()
+    } else {
+        if (node.expanded) {
+            node.collapse()
+        } else {
+            node.expand()
+        }
+    }
 }
 
 const loadArticles = async () => {
-    if (!selectedCategory.value) return
-
     try {
         loading.value = true
+        articles.value = []
         const params = {
-            page: currentPage.value,
-            page_size: pageSize.value,
-            category_id: selectedCategory.value.id,
             status: 1
         }
 
-        if (currentSort.value === 'hot') {
-            params.is_hot = 1
-        } else if (currentSort.value === 'views') {
-            params.sort = 'view_count'
+        if (selectedCategory.value) {
+            params.category_id = selectedCategory.value.id
+        } else {
+            params.min_view_count = 50
         }
 
         const res = await articleAPI.getList(params)
@@ -221,12 +233,10 @@ const loadArticles = async () => {
                 createTime: article.createTime,
                 updateTime: article.updateTime || article.createTime
             }))
-            total.value = res.data.total || 0
         }
     } catch (error) {
         console.error('加载文章失败:', error)
         articles.value = []
-        total.value = 0
     } finally {
         loading.value = false
     }
@@ -241,6 +251,51 @@ const handleCloseDetail = () => {
     detailVisible.value = false
 }
 
+const handleSubscribe = async (category) => {
+    const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+    
+    try {
+        if (category.isSubscribed) {
+            await subscriptionAPI.unsubscribe({
+                user_id: userInfo.userId,
+                category_id: category.id
+            })
+            category.isSubscribed = false
+            ElMessage.success('取消订阅成功')
+        } else {
+            await subscriptionAPI.subscribe({
+                user_id: userInfo.userId,
+                category_id: category.id
+            })
+            category.isSubscribed = true
+            ElMessage.success('订阅成功')
+        }
+    } catch (error) {
+        ElMessage.error(category.isSubscribed ? '取消订阅失败' : '订阅失败')
+    }
+}
+
+const getColumnCount = () => {
+    if (windowWidth.value >= 1536) return 4
+    if (windowWidth.value >= 1024) return 3
+    if (windowWidth.value >= 768) return 2
+    return 1
+}
+
+const handleResize = () => {
+    windowWidth.value = window.innerWidth
+}
+
+onMounted(() => {
+    loadCategories()
+    loadArticles()
+    window.addEventListener('resize', handleResize)
+})
+
+onUnmounted(() => {
+    window.removeEventListener('resize', handleResize)
+})
+
 const formatDate = (dateStr) => {
     if (!dateStr) return ''
     const date = new Date(dateStr)
@@ -250,14 +305,67 @@ const formatDate = (dateStr) => {
         day: '2-digit'
     })
 }
-
-onMounted(() => {
-    loadCategories()
-})
 </script>
 
 <style scoped>
 .el-tree :deep(.el-tree-node__label) {
     font-size: 15px;
+}
+
+.custom-tree-node {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 0;
+    cursor: pointer;
+    width: 100%;
+}
+
+.node-label {
+    font-size: 15px;
+    color: #334155;
+}
+
+.el-tree :deep(.el-tree-node__content:hover) {
+    background-color: #f1f5f9;
+}
+
+.el-tree :deep(.el-tree-node.is-current > .el-tree-node__content) {
+    background-color: #e0e7ff;
+}
+
+.star-icon {
+    margin-left: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.star-icon:hover {
+    background-color: #f1f5f9;
+    color: #fbbf24;
+}
+
+.star-active {
+    color: #fbbf24;
+}
+
+.star-active:hover {
+    background-color: #fef3c7;
+    color: #f59e0b;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+.hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }
 </style>

@@ -47,5 +47,18 @@ export const articleAPI = {
     
     getTopArticles(limit = 10) {
         return request.get('/article/top', { params: { limit } })
+    },
+    
+    getRankArticles(timeRange = 'daily', limit = 10) {
+        return request.get('/article/rank', { params: { time_range: timeRange, limit } })
+    },
+    
+    search(keyword, searchType = 'all', page = 1, pageSize = 10) {
+        return request.post('/article/search', {
+            keyword,
+            search_type: searchType,
+            page,
+            page_size: pageSize
+        })
     }
 }

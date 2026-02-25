@@ -16,10 +16,6 @@
                 </div>
 
                 <form @submit.prevent="handleLogin" class="space-y-6">
-                    <div v-if="errorMessage" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
-                        {{ errorMessage }}
-                    </div>
-
                     <div class="space-y-2">
                         <label class="text-sm font-semibold text-slate-700">学号</label>
                         <div class="relative">
@@ -98,10 +94,8 @@ const router = useRouter()
 const studentId = ref('')
 const password = ref('')
 const isLoading = ref(false)
-const errorMessage = ref('')
 
 const handleLogin = async () => {
-    errorMessage.value = ''
     isLoading.value = true
     
     try {
@@ -116,13 +110,8 @@ const handleLogin = async () => {
             }))
             ElMessage.success('登录成功！')
             router.push('/admin/dashboard')
-        } else {
-            errorMessage.value = response.statusText || '登录失败'
-            ElMessage.error(response.statusText || '登录失败')
         }
     } catch (error) {
-        errorMessage.value = error.message || '登录失败，请检查学号和密码'
-        ElMessage.error(error.message || '登录失败，请检查学号和密码')
     } finally {
         isLoading.value = false
     }

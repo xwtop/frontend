@@ -26,19 +26,12 @@ request.interceptors.response.use(
     error => {
         if (error.response) {
             const { status, data } = error.response
+            const errorMessage = data.statusText || data.message || '请求失败'
             if (status === 401) {
                 ElMessage.error('登录已过期，请重新登录')
                 localStorage.removeItem('token')
                 localStorage.removeItem('userInfo')
                 window.location.href = '/login'
-            } else if (status === 403) {
-                ElMessage.error('没有权限访问')
-            } else if (status === 404) {
-                ElMessage.error('请求的资源不存在')
-            } else if (status === 500) {
-                ElMessage.error(data.message || '服务器错误')
-            } else {
-                ElMessage.error(data.message || '请求失败')
             }
         } else {
             ElMessage.error('网络错误，请检查网络连接')
