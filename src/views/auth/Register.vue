@@ -50,44 +50,6 @@
                         </div>
 
                         <div class="space-y-2">
-                            <label class="text-sm font-semibold text-slate-700">邮箱</label>
-                            <div class="relative">
-                                <Mail class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                                <input
-                                    v-model="email"
-                                    type="email"
-                                    placeholder="请输入邮箱"
-                                    class="w-full pl-12 pr-4 py-3 bg-white/50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
-                                    required
-                                />
-                            </div>
-                        </div>
-
-                        <div class="space-y-2">
-                            <label class="text-sm font-semibold text-slate-700">邮箱验证码</label>
-                            <div class="flex gap-3">
-                                <div class="relative flex-1">
-                                    <Lock class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                                    <input
-                                        v-model="verifyCode"
-                                        type="text"
-                                        placeholder="请输入验证码"
-                                        class="w-full pl-12 pr-4 py-3 bg-white/50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
-                                        required
-                                    />
-                                </div>
-                                <button
-                                    type="button"
-                                    @click="sendVerifyCode"
-                                    :disabled="countdown > 0"
-                                    class="px-6 py-3 bg-primary-100 text-primary-700 rounded-xl font-semibold hover:bg-primary-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-                                >
-                                    {{ countdown > 0 ? `${countdown}s` : '获取验证码' }}
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="space-y-2">
                             <label class="text-sm font-semibold text-slate-700">密码</label>
                             <div class="relative">
                                 <Lock class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -150,35 +112,17 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { User, UserCircle, Mail, Lock, ArrowRight } from 'lucide-vue-next'
+import { User, UserCircle, Lock, ArrowRight } from 'lucide-vue-next'
 import { authAPI } from '../../api/auth'
 
 const router = useRouter()
 
 const studentId = ref('')
 const realName = ref('')
-const email = ref('')
-const verifyCode = ref('')
 const password = ref('')
 const confirmPassword = ref('')
 const isLoading = ref(false)
-const countdown = ref(0)
 const errorMessage = ref('')
-
-const sendVerifyCode = () => {
-    if (!email.value) {
-        ElMessage.warning('请先输入邮箱')
-        return
-    }
-    countdown.value = 60
-    const timer = setInterval(() => {
-        countdown.value--
-        if (countdown.value <= 0) {
-            clearInterval(timer)
-        }
-    }, 1000)
-    ElMessage.success('验证码已发送（模拟）')
-}
 
 const handleRegister = async () => {
     errorMessage.value = ''
@@ -195,9 +139,7 @@ const handleRegister = async () => {
         const response = await authAPI.register(
             studentId.value,
             password.value,
-            realName.value,
-            email.value,
-            verifyCode.value || '0000'
+            realName.value
         )
         
         if (response.status === 200) {

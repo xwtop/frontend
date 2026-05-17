@@ -61,6 +61,10 @@ const props = defineProps({
     article: {
         type: Object,
         required: true
+    },
+    initialLiked: {
+        type: Boolean,
+        default: undefined
     }
 })
 
@@ -85,6 +89,12 @@ const checkLikeStatus = async () => {
     if (checkedArticleId.value === props.article.id) return
     
     checkedArticleId.value = props.article.id
+    
+    if (props.initialLiked !== undefined) {
+        isLiked.value = props.initialLiked
+        return
+    }
+    
     try {
         const res = await articleLikeAPI.check(props.article.id)
         isLiked.value = res.data || false
@@ -122,6 +132,12 @@ watch(() => props.article?.id, (newId) => {
         checkLikeStatus()
     }
 }, { immediate: true })
+
+watch(() => props.initialLiked, (newVal) => {
+    if (newVal !== undefined) {
+        isLiked.value = newVal
+    }
+})
 </script>
 
 <style scoped>

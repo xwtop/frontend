@@ -106,7 +106,8 @@ const handleLogin = async () => {
             localStorage.setItem('userInfo', JSON.stringify({
                 userId: response.data.userId,
                 realName: response.data.realName,
-                role: response.data.role
+                role: response.data.role,
+                roleName: response.data.roleName
             }))
             ElMessage.success('登录成功！')
             router.push('/admin/dashboard')

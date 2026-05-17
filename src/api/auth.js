@@ -5,8 +5,8 @@ export const authAPI = {
         return api.post('/auth/login', { username, password })
     },
 
-    register(username, password, real_name, email, email_code) {
-        return api.post('/auth/register', { username, password, real_name, email, email_code })
+    register(username, password, real_name) {
+        return api.post('/auth/register', { username, password, real_name })
     },
 
     logout() {

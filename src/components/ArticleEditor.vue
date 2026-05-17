@@ -138,6 +138,53 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'success'])
 
+const STUDENT_ALLOWED_CATEGORIES = [
+    '社团招新', '文艺演出', '志愿服务',
+    '心理咨询', '心理讲座',
+    '院系动态', '校友动态',
+    '体育赛事', '社团活动',
+    '失物招领',
+    '实习信息', '创业指导'
+]
+
+const TEACHER_ALLOWED_CATEGORIES = [
+    '选课通知', '课表调整', '教学日历', '考试安排', '补考通知', '成绩发布', '教材通知', '实验安排',
+    '学校要闻', '院系动态', '媒体聚焦',
+    '学术论坛', '学术会议', '科研成果', '创新竞赛', '学科竞赛',
+    '体育赛事', '文艺演出', '社团活动'
+]
+
+const filterCategoriesByRole = (categories, role) => {
+    const isAdmin = role.includes('ADMIN')
+    if (isAdmin) return categories
+    
+    const isStudent = role.includes('STUDENT')
+    const isTeacher = role.includes('TEACHER')
+    
+    let allowedNames = []
+    if (isStudent) allowedNames = STUDENT_ALLOWED_CATEGORIES
+    else if (isTeacher) allowedNames = TEACHER_ALLOWED_CATEGORIES
+    else return []
+    
+    const filterNode = (nodes) => {
+        return nodes.map(node => {
+            const newNode = { ...node }
+            if (newNode.children && newNode.children.length > 0) {
+                const filteredChildren = filterNode(newNode.children)
+                newNode.children = filteredChildren
+            }
+            return newNode
+        }).filter(node => {
+            if (node.children && node.children.length > 0) {
+                return true
+            }
+            return allowedNames.includes(node.name)
+        })
+    }
+    
+    return filterNode(categories)
+}
+
 const visible = ref(props.modelValue)
 const showCategoryDialog = ref(false)
 const categories = ref([])
@@ -239,7 +286,9 @@ const loadArticle = async () => {
 const loadCategories = async () => {
     try {
         const result = await categoryAPI.getTree()
-        categories.value = result.data || []
+        const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+        const role = userInfo.role || []
+        categories.value = filterCategoriesByRole(result.data || [], role)
     } catch (error) {
         ElMessage.error('加载分类失败')
     }

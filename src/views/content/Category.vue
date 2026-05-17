@@ -48,6 +48,7 @@
                             <template #default="{ item }">
                                 <article-display-card
                                     :article="item"
+                                    :initial-liked="likedMap[item.id] || false"
                                     @view="handleViewArticle"
                                 />
                             </template>
@@ -65,6 +66,7 @@
                             <template #default="{ item }">
                                 <article-display-card
                                     :article="item"
+                                    :initial-liked="likedMap[item.id] || false"
                                     @view="handleViewArticle"
                                 />
                             </template>
@@ -100,6 +102,7 @@ import { ElMessage } from 'element-plus'
 import { categoryAPI } from '@/api/category'
 import { articleAPI } from '@/api/article'
 import { subscriptionAPI } from '@/api/subscription'
+import { articleLikeAPI } from '@/api/articleLike'
 import {
     Search,
     Star
@@ -114,6 +117,7 @@ const categoryTreeRef = ref(null)
 const categories = ref([])
 const selectedCategory = ref(null)
 const articles = ref([])
+const likedMap = ref({})
 const loading = ref(false)
 const filterText = ref('')
 const detailVisible = ref(false)
@@ -202,14 +206,17 @@ const loadArticles = async () => {
     try {
         loading.value = true
         articles.value = []
+        likedMap.value = {}
         const params = {
             status: 1
         }
 
         if (selectedCategory.value) {
             params.category_id = selectedCategory.value.id
+            params.page_size = 30
         } else {
             params.min_view_count = 50
+            params.page_size = 100
         }
 
         const res = await articleAPI.getList(params)
@@ -233,6 +240,18 @@ const loadArticles = async () => {
                 createTime: article.createTime,
                 updateTime: article.updateTime || article.createTime
             }))
+            
+            if (articles.value.length > 0) {
+                const articleIds = articles.value.map(a => a.id)
+                try {
+                    const likeRes = await articleLikeAPI.batchCheck(articleIds)
+                    if (likeRes.status === 200 && likeRes.data) {
+                        likedMap.value = likeRes.data
+                    }
+                } catch (error) {
+                    console.error('批量检查点赞状态失败:', error)
+                }
+            }
         }
     } catch (error) {
         console.error('加载文章失败:', error)

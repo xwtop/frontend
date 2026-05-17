@@ -168,8 +168,42 @@ const showNotificationPanel = ref(false)
 
 const userInfo = ref({
     realName: '',
-    avatar: ''
+    avatar: '',
+    role: [],
+    roleName: []
 })
+
+const STUDENT_HIDDEN_MENUS = [
+    '/admin/content/category-manage',
+    '/admin/system',
+    '/admin/notification/reminder'
+]
+
+const TEACHER_HIDDEN_MENUS = [
+    '/admin/content/category-manage',
+    '/admin/system'
+]
+
+const filterMenuByRole = (menus, role) => {
+    const isStudent = role.includes('STUDENT')
+    const isTeacher = role.includes('TEACHER')
+    const isAdmin = role.includes('ADMIN')
+    
+    if (isAdmin) return menus
+    
+    let hiddenMenus = []
+    if (isStudent) hiddenMenus = STUDENT_HIDDEN_MENUS
+    else if (isTeacher) hiddenMenus = TEACHER_HIDDEN_MENUS
+    
+    return menus.filter(menu => {
+        if (menu.children) {
+            const filteredChildren = menu.children.filter(child => !hiddenMenus.includes(child.path))
+            if (filteredChildren.length === 0) return false
+            menu.children = filteredChildren
+        }
+        return !hiddenMenus.includes(menu.path)
+    })
+}
 
 const loadUserInfo = async () => {
     try {
@@ -179,15 +213,19 @@ const loadUserInfo = async () => {
         }
         const userInfoData = JSON.parse(userInfoStr)
         const userId = userInfoData.userId
+        userInfo.value.role = userInfoData.role || []
+        userInfo.value.roleName = userInfoData.roleName || []
+        
         if (!userId) {
             return
         }
         const res = await userAPI.getById(userId)
         const userData = res.data
-        userInfo.value = {
-            realName: userData.realName || '',
-            avatar: userData.avatar || ''
-        }
+        userInfo.value.realName = userData.realName || ''
+        userInfo.value.avatar = userData.avatar || ''
+        
+        const role = userInfo.value.role
+        menuList.value = filterMenuByRole([...menuList.value], role)
     } catch (error) {
         console.error('获取用户信息失败:', error)
     }
